@@ -47,12 +47,12 @@ func (s *Server) Run() {
 			panic(err)
 		}
 		f := s.funcMaps[v.Name]
-		args := make([]reflect.Value, len(v.Args))
+		args := make([]reflect.Value, 0)
 		for _, v := range v.Args {
 			args = append(args, reflect.ValueOf(v))
 		}
 		rsp := f.Call(args)
-		rspArgs := make([]interface{}, len(rsp))
+		rspArgs := make([]interface{}, 0)
 		for _, v := range rsp {
 			rspArgs = append(rspArgs, v.Interface())
 		}
