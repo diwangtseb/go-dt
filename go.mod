@@ -1,4 +1,4 @@
-module go-dt
+module github.com/diwangtseb/go-dt
 
 go 1.19
 
