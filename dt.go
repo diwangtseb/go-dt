@@ -2,7 +2,6 @@ package dt
 
 import (
 	"context"
-	"log"
 
 	"github.com/dtm-labs/client/dtmgrpc"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -15,27 +14,27 @@ type MethodPair struct {
 }
 
 type TransactionActor interface {
-	ExecuteSaga(ctx context.Context, methodPairs ...MethodPair)
-	ExecuteMsg(ctx context.Context, methodPair ...MethodPair)
+	ExecuteSaga(ctx context.Context, methodPairs ...MethodPair) error
+	ExecuteMsg(ctx context.Context, methodPair ...MethodPair) error
 }
 
 type transactionActor struct {
 	dtmServerAddr  string
 	grpcServerAddr string
 	gid            string
-	logger         log.Logger
 }
 
 // MsgExecute implements TransactionActor
-func (ta *transactionActor) ExecuteMsg(ctx context.Context, methodPair ...MethodPair) {
+func (ta *transactionActor) ExecuteMsg(ctx context.Context, methodPair ...MethodPair) error {
 	msg := dtmgrpc.NewMsgGrpc(ta.dtmServerAddr, ta.gid)
 	for _, v := range methodPair {
 		msg = msg.Add(ta.withServerAction(v.Action), v.ProtoMsg)
 	}
 	msg.WaitResult = true
 	if err := msg.Submit(); err != nil {
-		ta.logger.Fatal(err)
+		return err
 	}
+	return nil
 }
 
 func NewTransactionActor(dtmAddr, grpcAddr string) TransactionActor {
@@ -43,7 +42,6 @@ func NewTransactionActor(dtmAddr, grpcAddr string) TransactionActor {
 		dtmServerAddr:  dtmAddr,
 		grpcServerAddr: grpcAddr,
 		gid:            dtmgrpc.MustGenGid(dtmAddr),
-		logger:         log.Logger{},
 	}
 }
 
@@ -55,7 +53,7 @@ func (ta *transactionActor) withServerCompensate(compensate string) string {
 }
 
 // Regist implements TransactionRegister
-func (ta *transactionActor) ExecuteSaga(ctx context.Context, methodPairs ...MethodPair) {
+func (ta *transactionActor) ExecuteSaga(ctx context.Context, methodPairs ...MethodPair) error {
 	saga := dtmgrpc.NewSagaGrpc(ta.dtmServerAddr, ta.gid)
 
 	for _, methodPair := range methodPairs {
@@ -63,8 +61,9 @@ func (ta *transactionActor) ExecuteSaga(ctx context.Context, methodPairs ...Meth
 	}
 	saga.WaitResult = true
 	if err := saga.Submit(); err != nil {
-		ta.logger.Fatal(err)
+		return err
 	}
+	return nil
 }
 
 var _ TransactionActor = (*transactionActor)(nil)
